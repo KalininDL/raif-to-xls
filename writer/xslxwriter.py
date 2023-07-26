@@ -32,81 +32,114 @@ class XslxWriter:
         self.sheet: Worksheet | None = None
 
     def generate_xlsx(self, reports: List[Report]):
-        for report in reports:
-            from_date_printable: str = report.from_date.strftime("%d.%b.%Y")
-            to_date_printable: str = report.to_date.strftime("%d.%b.%Y")
+        rsd_reports: List[Report] = list(
+            filter(lambda r: r.currency == Currency.RSD, reports)
+        )
+        eur_reports: List[Report] = list(
+            filter(lambda r: r.currency == Currency.EUR, reports)
+        )
+        usd_reports: List[Report] = list(
+            filter(lambda r: r.currency == Currency.USD, reports)
+        )
+        for curr_report in [rsd_reports, usd_reports, eur_reports]:
+            if len(curr_report) == 0:
+                continue
 
-            file_name: str = (
-                f"Report-{report.currency.name}-"
-                f"{from_date_printable}-"
-                f"{to_date_printable}.xlsx"
-            )
+            if self.settings.single_file:
+                file_name: str = f"Report-{curr_report[0].currency.name}.xlsx"
 
-            sheet_name: str = f"{from_date_printable}-{to_date_printable}"
-
-            writer = pd.ExcelWriter(
-                file_name,
-                engine="xlsxwriter",
-                datetime_format="dd.mm.yyyy",
-            )
-            self.workbook = writer.book
-            self.workbook.add_worksheet(sheet_name)
-            self.sheet: Worksheet = writer.sheets[sheet_name]
-            self.row_count = 0
-
-            self.add_section_header(
-                self.row_count, 1, 15, height=30, title="General report"
-            )
-
-            printable_df = report.table.dataframe
-
-            (max_row, max_col) = printable_df.shape
-
-            self.sheet.add_table(
-                1,
-                0,
-                max_row + 1,
-                max_col,
-                {"autofilter": True, "style": f"Table Style Medium 9"},
-            )
-
-            my_format = self.workbook.add_format()
-            my_format.set_align("vcenter")
-            self.workbook.add_format({"num_format": "$#,##0.00"})
-
-            self.sheet.autofilter(1, 0, max_row + 1, max_col)
-
-            # Convert the dataframe to an XlsxWriter Excel object.
-            printable_df.to_excel(writer, sheet_name=sheet_name, startrow=1, startcol=0)
-
-            for col_num, value in enumerate(printable_df.columns.values):
-                self.sheet.write(
-                    1, col_num + 1, value, self.workbook.add_format({"font_size": 12})
+                writer = pd.ExcelWriter(
+                    file_name,
+                    engine="xlsxwriter",
+                    datetime_format="dd.mm.yyyy",
                 )
 
-            for row_num, row in printable_df.iterrows():
-                if not pd.isna(row["Card number"]):
-                    self.sheet.write(
-                        row_num + 2,
-                        3,
-                        row["Card number"],
-                        self.workbook.add_format({"align": "right"}),
+            for report in curr_report:
+                from_date_printable: str = report.from_date.strftime("%d.%b.%Y")
+                to_date_printable: str = report.to_date.strftime("%d.%b.%Y")
+
+                if not self.settings.single_file:
+                    file_name: str = (
+                        f"Report-{report.currency.name}-"
+                        f"{from_date_printable}-"
+                        f"{to_date_printable}.xlsx"
                     )
 
-            self.sheet.write(1, 0, "№")
+                    writer = pd.ExcelWriter(
+                        file_name,
+                        engine="xlsxwriter",
+                        datetime_format="dd.mm.yyyy",
+                    )
 
-            self.gap(len(printable_df) + 2)
+                sheet_name: str = f"{from_date_printable}-{to_date_printable}"
 
-            self.add_report_income_expense_stats(report)
+                self.workbook = writer.book
+                self.workbook.add_worksheet(sheet_name)
+                self.sheet: Worksheet = writer.sheets[sheet_name]
+                self.row_count = 0
 
-            self.add_income_report(report.income)
+                self.add_section_header(
+                    self.row_count, 1, 15, height=30, title="General report"
+                )
 
-            self.add_expenses_report(report.expenses)
+                printable_df = report.table.dataframe
 
-            self.sheet.autofit()
+                (max_row, max_col) = printable_df.shape
 
-            # Close the Pandas Excel writer and output the Excel file.
-            writer.close()
+                self.sheet.add_table(
+                    1,
+                    0,
+                    max_row + 1,
+                    max_col,
+                    {"autofilter": True, "style": f"Table Style Medium 9"},
+                )
+
+                my_format = self.workbook.add_format()
+                my_format.set_align("vcenter")
+                self.workbook.add_format({"num_format": "$#,##0.00"})
+
+                self.sheet.autofilter(1, 0, max_row + 1, max_col)
+
+                # Convert the dataframe to an XlsxWriter Excel object.
+                printable_df.to_excel(
+                    writer, sheet_name=sheet_name, startrow=1, startcol=0
+                )
+
+                for col_num, value in enumerate(printable_df.columns.values):
+                    self.sheet.write(
+                        1,
+                        col_num + 1,
+                        value,
+                        self.workbook.add_format({"font_size": 12}),
+                    )
+
+                for row_num, row in printable_df.iterrows():
+                    if not pd.isna(row["Card number"]):
+                        self.sheet.write(
+                            row_num + 2,
+                            3,
+                            row["Card number"],
+                            self.workbook.add_format({"align": "right"}),
+                        )
+
+                self.sheet.write(1, 0, "№")
+
+                self.gap(len(printable_df) + 2)
+
+                self.add_report_income_expense_stats(report)
+
+                self.add_income_report(report.income)
+
+                self.add_expenses_report(report.expenses)
+
+                self.sheet.autofit()
+
+                # Close the Pandas Excel writer and output the Excel file.
+                if not self.settings.single_file:
+                    writer.close()
+
+            if self.settings.single_file:
+                writer.close()
 
     def add_section_header(
         self,
