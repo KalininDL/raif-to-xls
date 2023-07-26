@@ -33,8 +33,8 @@ class XslxWriter:
 
     def generate_xlsx(self, reports: List[Report]):
         for report in reports:
-            from_date_printable: str = report.from_date.strftime("%d.%m.%Y")
-            to_date_printable: str = report.to_date.strftime("%d.%m.%Y")
+            from_date_printable: str = report.from_date.strftime("%d.%b.%Y")
+            to_date_printable: str = report.to_date.strftime("%d.%b.%Y")
 
             file_name: str = (
                 f"Report-{report.currency.name}-"
