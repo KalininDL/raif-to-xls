@@ -1,0 +1,17 @@
+black==23.7.0
+click==8.1.6
+distro==1.8.0
+mypy-extensions==1.0.0
+numpy==1.25.1
+packaging==23.1
+pandas==2.0.3
+pathspec==0.11.1
+platformdirs==3.9.1
+PyPDF2==3.0.1
+python-dateutil==2.8.2
+pytz==2023.3
+six==1.16.0
+tabula-py==2.7.0
+termcolor==2.3.0
+tzdata==2023.3
+XlsxWriter==3.1.2
