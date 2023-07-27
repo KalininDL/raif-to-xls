@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Dict
 
 import pandas as pd
+from tqdm import tqdm
 from xlsxwriter import Workbook
 from xlsxwriter.format import Format
 from xlsxwriter.worksheet import Worksheet
@@ -32,6 +33,9 @@ class XslxWriter:
         self.sheet: Worksheet | None = None
 
     def generate_xlsx(self, reports: List[Report]):
+        progress = tqdm(
+            total=len(reports), colour="green", desc="Generating XSLXs: ", initial=1
+        )
         rsd_reports: List[Report] = list(
             filter(lambda r: r.currency == Currency.RSD, reports)
         )
@@ -55,6 +59,7 @@ class XslxWriter:
                 )
 
             for report in curr_report:
+                progress.update(1)
                 from_date_printable: str = report.from_date.strftime("%d.%b.%Y")
                 to_date_printable: str = report.to_date.strftime("%d.%b.%Y")
 
@@ -140,6 +145,9 @@ class XslxWriter:
 
             if self.settings.single_file:
                 writer.close()
+
+            progress.set_description("Generating xslx complete!")
+            progress.close()
 
     def add_section_header(
         self,
