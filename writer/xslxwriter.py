@@ -129,7 +129,7 @@ class XslxWriter:
 
                 self.sheet.write(1, 0, "№")
 
-                self.gap(len(printable_df) + 2)
+                self.advance_row_pointer(len(printable_df) + 2)
 
                 self.add_report_income_expense_stats(report)
 
@@ -161,7 +161,7 @@ class XslxWriter:
         header_format: Format = self.format("merge", bg_color=bg_color)
         self.sheet.merge_range(row, col, row, col + width - 1, title, header_format)
         self.sheet.set_row(row, height)
-        self.gap()
+        self.advance_row_pointer()
 
     def add_report_income_expense_stats(self, report: Report):
         income: float = report.income.total
@@ -177,22 +177,22 @@ class XslxWriter:
 
         self.sheet.write(self.row_count, 9, "Total income:", self.format("bold"))
         self.sheet.write(self.row_count, 10, try_format_float(income), income_style)
-        self.gap()
+        self.advance_row_pointer()
 
         self.sheet.write(self.row_count, 9, "Total expenses:", self.format("bold"))
         self.sheet.write(self.row_count, 10, try_format_float(expenses), expense_style)
-        self.gap()
+        self.advance_row_pointer()
 
         self.sheet.write(self.row_count, 9, "Left: ", self.format("bold"))
         self.sheet.write(self.row_count, 10, try_format_float(income - expenses), left)
-        self.gap()
+        self.advance_row_pointer()
 
         self.sheet.write(self.row_count, 8, "You spent", self.format("bold"))
         self.sheet.write(
             self.row_count, 9, str(int((expenses / income) * 100)) + "%", left
         )
         self.sheet.write(self.row_count, 10, "of your income", self.format("bold"))
-        self.gap()
+        self.advance_row_pointer()
 
     def add_income_report(self, income: Income):
         self.add_section_header(
@@ -214,7 +214,7 @@ class XslxWriter:
         self.sheet.write(
             self.row_count, 3, try_format_float(other), self.format("right")
         )
-        self.gap()
+        self.advance_row_pointer()
 
         total: float = income.total
         self.sheet.write(self.row_count, 2, "Total:", self.format("bold"))
@@ -226,7 +226,7 @@ class XslxWriter:
                 {"bg_color": Colors.BG_INCOME, "align": "right", "bold": True}
             ),
         )
-        self.gap(2)
+        self.advance_row_pointer(2)
 
     def add_expenses_report(self, expenses: Expenses):
         first_table_start_cell: int = 1
@@ -255,7 +255,7 @@ class XslxWriter:
         self.row_count = second_tables_row
         self.add_currency_operations(expenses, second_table_start_cell)
 
-        self.gap(2)
+        self.advance_row_pointer(2)
 
     def add_top_5_places(
         self, expenses, headers_row, second_table_start_cell, start_cell
@@ -279,7 +279,7 @@ class XslxWriter:
             "Average bill",
             self.format("label"),
         )
-        self.gap()
+        self.advance_row_pointer()
         for top_5_item in top_5:
             amount: float = top_5_item.amount
             title: str = top_5_item.title
@@ -300,8 +300,8 @@ class XslxWriter:
                 try_format_float(avg),
                 self.format("right"),
             )
-            self.gap()
-        self.gap()
+            self.advance_row_pointer()
+        self.advance_row_pointer()
 
     def add_top_5_purchases(self, expenses, first_table_start_cell):
         top_5_purchases: List[FinOp] = expenses.top_5_purchases
@@ -344,7 +344,7 @@ class XslxWriter:
             "Exchange rate",
             self.format("label"),
         )
-        self.gap()
+        self.advance_row_pointer()
         for curr_op in currency_operations:
             self.add_currency_op(self.row_count, second_table_start_cell, curr_op)
 
@@ -377,7 +377,7 @@ class XslxWriter:
             try_format_float(amount),
             self.workbook.add_format({"align": "right"}),
         )
-        self.gap()
+        self.advance_row_pointer()
 
     def add_fin_op_header(
         self, row: int, start_cell: int, bg_color: str = Colors.BG_LABELS
@@ -387,7 +387,7 @@ class XslxWriter:
             row, start_cell + 1, "Description", self.format("label", bg_color)
         )
         self.sheet.write(row, start_cell + 2, "Amount", self.format("label", bg_color))
-        self.gap()
+        self.advance_row_pointer()
 
     def add_currency_op(self, row: int, start_cell: int, curr_op: CurrencyOperation):
         bought_amount: float = curr_op.bought[0]
@@ -405,7 +405,7 @@ class XslxWriter:
             self.workbook.add_format({"align": "left"}),
         )
 
-    def gap(self, rows: int = 1):
+    def advance_row_pointer(self, rows: int = 1):
         self.row_count += rows
 
     def format(self, name: str, bg_color: str = None) -> Format:
