@@ -2,20 +2,20 @@
 
 from typing import List
 from util import print_colored
-from cli import CLI
+from cli import CLI, Settings
 from aggregator import Aggregator, Report
 from reader import Table, PDFReader
 from writer import XslxWriter
 
 
 def main():
-    settings = CLI().get_settings()
-    pdf_reader = PDFReader(settings)
+    settings: Settings = CLI().get_settings()
+    pdf_reader: PDFReader = PDFReader(settings)
 
     tables: List[Table] = pdf_reader.extract_data_from_pdfs()
     reports: List[Report] = Aggregator().generate_reports(tables)
 
-    writer = XslxWriter(settings)
+    writer: XslxWriter = XslxWriter(settings)
     writer.generate_xlsx(reports)
     print_colored("Done!", "green")
 

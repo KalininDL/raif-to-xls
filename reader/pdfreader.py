@@ -1,3 +1,4 @@
+from asyncio import Future
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor, wait
 from multiprocessing import cpu_count
@@ -99,7 +100,7 @@ class PDFReader:
     ) -> List[DataFrame]:
         self.progress.update(1)
         self.progress.set_description(f"Reading ${file_name}: ", refresh=True)
-        executor = ThreadPoolExecutor(max_workers=cpu_count())
+        executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=cpu_count())
         read_pdf_tasks: List[Tuple[Dict[str, Any], int]] = [
             (
                 {
@@ -140,7 +141,7 @@ class PDFReader:
             )
         )
 
-        futures = [
+        futures: list[Future] = [
             executor.submit(self.read_page_async, args[1], args[0])
             for args in read_pdf_tasks
         ]
@@ -179,17 +180,7 @@ class PDFReader:
             table = pd.concat(dataframes, axis=0, ignore_index=True)
 
             # Extract exchange rate into separate column
-
-            table.insert(6, "Exchange rate", "")
-
-            for idx, row in table.loc[
-                table["Amount in original currency"].str.contains(
-                    "(?<=Kurs: ).*", na=False
-                )
-            ].iterrows():
-                table.loc[idx - 1, "Exchange rate"] = row[
-                    "Amount in original currency"
-                ].split(" ")[1]
+            self.extract_exchange_rate_to_sep_column(table)
 
             # Drop Nan rows
             table.dropna(subset=["Balance"], inplace=True)
@@ -197,84 +188,95 @@ class PDFReader:
 
             # Sometimes "Trsansaction date" may be empty,
             # use "Completion date" as a fallback to not mess with nan rows further
-            for idx, row in table.iterrows():
-                if pd.isna(row["Transaction date"]):
-                    table.at[idx, "Transaction date"] = row["Completion date"]
-                try:
-                    table.at[idx, "Amount in foreign currency"] = float(
-                        row["Amount in foreign currency"]
-                    )
-                except ValueError:
-                    pass
+            self.fill_empty_transaction_date(table)
 
             # Settings data types
-            table["Expense"] = (
-                table["Expense"].replace(",", "", regex=True).astype(float)
-            )
-            table["Income"] = table["Income"].replace(",", "", regex=True).astype(float)
-            table["Balance"] = (
-                table["Balance"].replace(",", "", regex=True).astype(float)
-            )
-            table["Amount in original currency"] = table[
-                "Amount in original currency"
-            ].replace(",", "", regex=True)
-            table["Completion date"] = table["Completion date"].apply(
-                lambda date: to_datetime(date)
-            )
-            table["Transaction date"] = table["Transaction date"].apply(
-                lambda date: to_datetime(date)
-            )
+            self.set_data_types(table)
+
             table.fillna("No information", inplace=True)
 
             all_tables.append(Table(table, currency))
 
         if merge:
-            rsd_reports: List[DataFrame] = list(
-                filter(
-                    lambda table: table.currency is Currency.RSD,
-                    all_tables,
+            return self.merge_tables(all_tables)
+        else:
+            return all_tables
+
+    def merge_tables(self, all_tables):
+        rsd_reports: List[DataFrame] = list(
+            filter(
+                lambda table: table.currency is Currency.RSD,
+                all_tables,
+            )
+        )
+        eur_reports: List[DataFrame] = list(
+            filter(
+                lambda table: table.currency is Currency.EUR,
+                all_tables,
+            )
+        )
+        usd_reports: List[DataFrame] = list(
+            filter(
+                lambda table: table.currency is Currency.USD,
+                all_tables,
+            )
+        )
+        merged_tables: List[Table] = []
+        if rsd_reports:
+            merged_tables.append(
+                Table(
+                    pd.concat(map(lambda t: t.dataframe, rsd_reports), axis=0),
+                    Currency.RSD,
                 )
             )
-            eur_reports: List[DataFrame] = list(
-                filter(
-                    lambda table: table.currency is Currency.EUR,
-                    all_tables,
+        if eur_reports:
+            merged_tables.append(
+                Table(
+                    pd.concat(map(lambda t: t.dataframe, eur_reports), axis=0),
+                    Currency.EUR,
                 )
             )
-            usd_reports: List[DataFrame] = list(
-                filter(
-                    lambda table: table.currency is Currency.USD,
-                    all_tables,
+        if usd_reports:
+            merged_tables.append(
+                Table(
+                    pd.concat(map(lambda t: t.dataframe, usd_reports), axis=0),
+                    Currency.USD,
                 )
             )
+        for table in merged_tables:
+            table.dataframe.reset_index(drop=True, inplace=True)
+        return merged_tables
 
-            merged_tables: List[Table] = []
-
-            if rsd_reports:
-                merged_tables.append(
-                    Table(
-                        pd.concat(map(lambda t: t.dataframe, rsd_reports), axis=0),
-                        Currency.RSD,
-                    )
+    def fill_empty_transaction_date(self, table):
+        for idx, row in table.iterrows():
+            if pd.isna(row["Transaction date"]):
+                table.at[idx, "Transaction date"] = row["Completion date"]
+            try:
+                table.at[idx, "Amount in foreign currency"] = float(
+                    row["Amount in foreign currency"]
                 )
-            if eur_reports:
-                merged_tables.append(
-                    Table(
-                        pd.concat(map(lambda t: t.dataframe, eur_reports), axis=0),
-                        Currency.EUR,
-                    )
-                )
-            if usd_reports:
-                merged_tables.append(
-                    Table(
-                        pd.concat(map(lambda t: t.dataframe, usd_reports), axis=0),
-                        Currency.USD,
-                    )
-                )
+            except ValueError:
+                pass
 
-            for table in merged_tables:
-                table.dataframe.reset_index(drop=True, inplace=True)
+    def set_data_types(self, table):
+        table["Expense"] = table["Expense"].replace(",", "", regex=True).astype(float)
+        table["Income"] = table["Income"].replace(",", "", regex=True).astype(float)
+        table["Balance"] = table["Balance"].replace(",", "", regex=True).astype(float)
+        table["Amount in original currency"] = table[
+            "Amount in original currency"
+        ].replace(",", "", regex=True)
+        table["Completion date"] = table["Completion date"].apply(
+            lambda date: to_datetime(date)
+        )
+        table["Transaction date"] = table["Transaction date"].apply(
+            lambda date: to_datetime(date)
+        )
 
-            return merged_tables
-
-        return all_tables
+    def extract_exchange_rate_to_sep_column(self, table):
+        table.insert(6, "Exchange rate", "")
+        for idx, row in table.loc[
+            table["Amount in original currency"].str.contains("(?<=Kurs: ).*", na=False)
+        ].iterrows():
+            table.loc[idx - 1, "Exchange rate"] = row[
+                "Amount in original currency"
+            ].split(" ")[1]
