@@ -1,7 +1,8 @@
 # raif-to-xls
 
 This tool allows you to convert your Raiffeisen Bank reports into easy-to-work-with xlsx sheets.
-This tool supports RSD, USD and EUR reports.
+
+The tool supports RSD, USD and EUR reports.
 
 ### How to use?
 1. Clone this project using git cli tool:
