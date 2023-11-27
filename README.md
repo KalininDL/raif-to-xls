@@ -4,6 +4,13 @@ This tool allows you to convert your Raiffeisen Bank reports into easy-to-work-w
 
 The tool supports RSD, USD and EUR reports.
 
+#### This tool also aggregates some statics of chosen period:
+* Income/outcome balance
+* Top-5 biggest purchases
+* Top-5 places where you spent money most often
+* Currency operations
+* Cache withdraws
+
 ### How to use?
 1. Clone this project using git cli tool:
  * `git clone https://github.com/KalininDL/raif-to-xls.git`
