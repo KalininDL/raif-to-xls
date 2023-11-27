@@ -50,7 +50,9 @@ class XslxWriter:
                 continue
 
             if self.settings.single_file:
-                file_name: str = f"Report-{curr_report[0].currency.name}.xlsx"
+                file_name: str = (
+                    f"{self.settings.output}/Report-{curr_report[0].currency.name}.xlsx"
+                )
 
                 writer = pd.ExcelWriter(
                     file_name,
@@ -65,6 +67,7 @@ class XslxWriter:
 
                 if not self.settings.single_file:
                     file_name: str = (
+                        f"{self.settings.output}/"
                         f"Report-{report.currency.name}-"
                         f"{from_date_printable}-"
                         f"{to_date_printable}.xlsx"

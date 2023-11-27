@@ -38,6 +38,9 @@ class CLI:
         args: Namespace = self.args_parser.parse_args()
         files: List[str] = args.files
         files_to_process: List[str] = []
+        out_dir: str = (
+            args.output_dir if args.output_dir[-1] != "/" else args.output_dir[:-1]
+        )
 
         for file in files:
             if not (os.path.exists(file) and os.path.isfile(file)):
@@ -52,4 +55,4 @@ class CLI:
             else:
                 files_to_process.append(file)
 
-        return Settings(args.merge, files_to_process, args.output_dir, args.single_file)
+        return Settings(args.merge, files_to_process, out_dir, args.single_file)
