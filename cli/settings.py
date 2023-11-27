@@ -8,4 +8,3 @@ class Settings:
     files: List[str]
     output: str
     single_file: bool
-    yulia_mode: bool

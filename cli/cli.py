@@ -32,7 +32,6 @@ class CLI:
             default=False,
             action="store_true",
         )
-        arg_parser.add_argument("-u", default=False, action="store_true")
         self.args_parser = arg_parser
 
     def get_settings(self) -> Settings:
@@ -53,6 +52,4 @@ class CLI:
             else:
                 files_to_process.append(file)
 
-        return Settings(
-            args.merge, files_to_process, args.output_dir, args.single_file, args.u
-        )
+        return Settings(args.merge, files_to_process, args.output_dir, args.single_file)
